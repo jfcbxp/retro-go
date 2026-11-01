@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LCD_BUFFER_LENGTH (RG_SCREEN_WIDTH * 4) // In pixels
+#define LCD_BUFFER_LENGTH (RG_SCREEN_WIDTH * RG_SCREEN_HEIGHT) // Full framebuffer in pixels
 
 // static rg_display_driver_t driver;
 static rg_task_t *display_task_queue;
@@ -38,6 +38,8 @@ static inline void lcd_send_buffer(uint16_t *buffer, size_t length);
 
 #if RG_SCREEN_DRIVER == 0 || RG_SCREEN_DRIVER == 1 /* ILI9341/ST7789 */
 #include "drivers/display/ili9341.h"
+#elif RG_SCREEN_DRIVER == 2 /* ST7789 Intel 8080 / 8-bit parallel */
+#include "drivers/display/st7789-i80.h"
 #elif RG_SCREEN_DRIVER == 99
 #include "drivers/display/sdl2.h"
 #else
@@ -232,7 +234,7 @@ static inline void write_update(const rg_surface_t *update)
             int left = display.screen.margins.left + draw_left;
             int top = display.screen.margins.top + draw_top + y - lines_to_copy;
             if (top != window_top)
-                lcd_set_window(left, top, draw_width, lines_remaining);
+                lcd_set_window(left, top, draw_width, lines_to_copy);
             lcd_send_buffer(line_buffer, draw_width * lines_to_copy);
             window_top = top + lines_to_copy;
             lines_updated += lines_to_copy;

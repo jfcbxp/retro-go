@@ -141,6 +141,17 @@ void I_FinishUpdate(void)
 {
     rg_display_submit(update, 0);
     rg_display_sync(true); // Wait for update->buffer to be released
+
+    static int64_t last_frame_time = 0;
+    int64_t now = rg_system_timer();
+    if (last_frame_time)
+    {
+        int64_t elapsed = now - last_frame_time;
+        const int64_t frame_time = 28571; // 35 FPS in microseconds
+        if (elapsed < frame_time)
+            rg_usleep(frame_time - elapsed);
+    }
+    last_frame_time = rg_system_timer();
 }
 
 bool I_StartDisplay(void)
@@ -354,8 +365,11 @@ void I_InitSound(void)
             sfx[i] = W_CacheLumpNum(S_sfx[i].lumpnum);
     }
 
-    music_player->init(snd_samplerate);
-    music_player->setvolume(snd_MusicVolume);
+    if (mus_card && !nomusicparm)
+    {
+        music_player->init(snd_samplerate);
+        music_player->setvolume(snd_MusicVolume);
+    }
 
     rg_task_create("doom_sound", &soundTask, NULL, 2048, RG_TASK_PRIORITY_2, 1);
 }
@@ -367,6 +381,8 @@ void I_ShutdownSound(void)
 
 void I_PlaySong(int handle, int looping)
 {
+    if (!mus_card || nomusicparm)
+        return;
     music_player->play((void *)handle, looping);
     musicPlaying = true;
 }
@@ -548,30 +564,22 @@ void app_main()
     SCREENHEIGHT = RG_MIN(rg_display_get_height(), MAX_SCREENHEIGHT);
 
     update = rg_surface_create(SCREENWIDTH, SCREENHEIGHT, RG_PIXEL_PAL565_BE, MEM_FAST);
+    rg_display_clear(C_BLACK);
+    rg_display_sync(true);
 
-    const char *iwad = NULL;
-    const char *pwad = NULL;
-
-    if (is_iwad(app->romPath))
-        iwad = app->romPath;
-    else
-        pwad = app->romPath;
-
-    if (!iwad)
-    {
-        iwad = rg_gui_file_picker("Select IWAD file", I_DoomExeDir(), is_iwad, false, false) ?: "";
-        rg_gui_draw_hourglass(); // Redraw hourglass to indicate loading...
-    }
+    const char *iwad = "doom1.wad";
+    mus_card = 0;
 
     myargv = doom_argv;
-    myargc = pwad ? 7 : 5;
+    myargc = 8;
     doom_argv[0] = "doom";
     doom_argv[1] = "-save";
     doom_argv[2] = RG_BASE_PATH_SAVES "/doom";
     doom_argv[3] = "-iwad";
     doom_argv[4] = iwad;
-    doom_argv[5] = "-file";
-    doom_argv[6] = pwad;
+    doom_argv[5] = "-nomusic";
+    doom_argv[6] = "-playdemo";
+    doom_argv[7] = "demo1";
     doom_argv[myargc] = 0;
 
 #ifdef ESP_PLATFORM

@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #ifdef RETRO_GO
 #include <rg_system.h>
+#include <esp_partition.h>
 #endif
 
 #include "doomdef.h"
@@ -708,6 +709,26 @@ static void D_DoomMainSetup(void)
   modifiedgame = false;
   numwadfiles = 0;
 
+#ifdef ESP_PLATFORM
+  const esp_partition_t *doomwad_partition = esp_partition_find_first(
+      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "doomwad");
+  if (doomwad_partition)
+  {
+    const void *doomwad_data = NULL;
+    esp_partition_mmap_handle_t map_handle;
+    if (esp_partition_mmap(doomwad_partition, 0, doomwad_partition->size,
+                           ESP_PARTITION_MMAP_DATA, &doomwad_data, &map_handle) == ESP_OK)
+    {
+      wadfiles[numwadfiles++] = (wadfile_info_t){
+          .name = "doom1.wad",
+          .data = (void *)doomwad_data,
+          .size = (int)doomwad_partition->size,
+          .handle = NULL,
+      };
+    }
+  }
+#endif
+
   lprintf(LO_INFO, "M_LoadDefaults: Load system defaults.\n");
   M_LoadDefaults(); // load before initing other systems
 
@@ -1055,7 +1076,6 @@ static void D_DoomMainSetup(void)
   else if ((p = M_CheckParm("-playdemo")) && ++p < myargc)
   {
     G_DeferedPlayDemo(myargv[p]);
-    singledemo = true;          // quit after one demo
   }
 
   if (slot && ++slot < myargc)
