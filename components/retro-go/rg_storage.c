@@ -177,6 +177,12 @@ void rg_storage_init(void)
         };
 
         esp_err_t err = esp_vfs_fat_spiflash_mount(RG_STORAGE_ROOT, RG_STORAGE_FLASH_PARTITION, &mount_config, &wl_handle);
+        if (err != ESP_OK)
+        {
+            RG_LOGW("Wear-levelled FAT mount failed (0x%x), trying read-only raw FAT...", err);
+            mount_config.format_if_mount_failed = false;
+            err = esp_vfs_fat_spiflash_mount_ro(RG_STORAGE_ROOT, RG_STORAGE_FLASH_PARTITION, &mount_config);
+        }
         error_code = (int)err;
     }
 

@@ -107,13 +107,67 @@ FPS:35
 The expected FPS values may vary by a few frames, but the demo must advance
 and the screen must update continuously.
 
-## Build and flash
+## Complete setup on Windows
 
-Activate the ESP-IDF 5.1 environment and run from the Retro-Go root:
+Tools used for the verified setup:
+
+- Git for Windows
+- Python 3
+- `pyserial`
+- Espressif ESP-IDF 5.1 at `C:\Espressif\esp-idf`
+- USB serial port `COM9`
+- A valid `doom1.wad`
+
+Install Python tooling:
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install pyserial
+```
+
+Install Espressif's Windows ESP-IDF 5.1 environment first. Clone the fork and
+enter the Doom branch:
+
+```powershell
+Set-Location C:\Users\$env:USERNAME\Documents
+git clone https://github.com/jfcbxp/retro-go.git
+Set-Location C:\Users\$env:USERNAME\Documents\retro-go
+git checkout feature/t-display-s3-lcd-doom
+```
+
+Load ESP-IDF in the current PowerShell session:
 
 ```powershell
 $env:IDF_PATH="C:\Espressif\esp-idf"
 $env:IDF_TARGET="esp32s3"
+. C:\Espressif\esp-idf\export.ps1
+idf.py --version
+```
+
+If ESP-IDF is installed elsewhere, set `IDF_PATH` accordingly. Find the board
+serial port:
+
+```powershell
+Get-PnpDevice -PresentOnly | Where-Object {
+  $_.InstanceId -match 'VID_303A' -or $_.FriendlyName -match 'USB.*Serial'
+}
+```
+
+### Erase and flash from scratch
+
+This removes the Agent Needs You firmware and every retained flash partition.
+Replace `COM9` with the port assigned by Windows.
+
+```powershell
+python C:\Espressif\esp-idf\components\esptool_py\esptool\esptool.py `
+  --chip esp32s3 `
+  --port COM9 `
+  erase_flash
+```
+
+Clean, build, install the WAD partition and flash the launcher plus PrBoom:
+
+```powershell
 python .\rg_tool.py clean launcher prboom-go --target t-display-s3-lcd
 python .\rg_tool.py install launcher prboom-go `
   --target t-display-s3-lcd `

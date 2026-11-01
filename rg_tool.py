@@ -69,7 +69,7 @@ def run(cmd, cwd=None, check=True):
     return subprocess.run(cmd, shell=False, cwd=cwd, check=check)
 
 
-def build_image(apps, output_file, img_type="odroid", fatsize=0, target="unknown", version="unknown"):
+def build_image(apps, output_file, img_type="odroid", fatsize=0, fatfile=None, wadfile=None, target="unknown", version="unknown"):
     print("Building firmware image with: %s\n" % " ".join(apps))
     args = [MKFW_PY, "--type", img_type, "--name", PROJECT_NAME, "--icon", PROJECT_ICON, "--version", PROJECT_VER]
 
@@ -90,8 +90,10 @@ def build_image(apps, output_file, img_type="odroid", fatsize=0, target="unknown
             subtype = ota_next_id
             ota_next_id += 1
         args += [str(part[0]), str(subtype), str(part[2]), app, os.path.join(app, "build", app + ".bin")]
+    if wadfile:
+        args += ["1", "64", "4194304", "doomwad", wadfile]
     if fatsize:
-        args += ["1", "129", fatsize, "vfs", "none"]
+        args += ["1", "129", fatsize, "vfs", fatfile or "none"]
 
     run(args)
 
@@ -182,6 +184,12 @@ parser.add_argument(
 parser.add_argument(
     "--fatsize", help="Add FAT storage partition of provided size (500K, 5M,...) to the built image."
 )
+parser.add_argument(
+    "--fatfile", help="Optional FAT image file to place in the vfs partition."
+)
+parser.add_argument(
+    "--wadfile", help="Optional Doom WAD file to place in a dedicated flash partition."
+)
 args = parser.parse_args()
 
 if os.path.exists(f"components/retro-go/targets/{args.target}/env.py"):
@@ -215,14 +223,14 @@ try:
         print("=== Step: Packing ===\n")
         if FW_FORMAT in ["odroid", "esplay"]:
             fw_file = ("%s_%s_%s.fw" % (PROJECT_NAME, PROJECT_VER, args.target)).lower()
-            build_image(apps, fw_file, FW_FORMAT, args.fatsize, args.target, PROJECT_VER)
+            build_image(apps, fw_file, FW_FORMAT, args.fatsize, args.fatfile, args.wadfile, args.target, PROJECT_VER)
         else:
             print("Device doesn't support fw format, try build-img!")
 
     if command in ["build-img", "release", "install"]:
         print("=== Step: Packing ===\n")
         img_file = ("%s_%s_%s.img" % (PROJECT_NAME, PROJECT_VER, args.target)).lower()
-        build_image(apps, img_file, IDF_TARGET, args.fatsize, args.target, PROJECT_VER)
+        build_image(apps, img_file, IDF_TARGET, args.fatsize, args.fatfile, args.wadfile, args.target, PROJECT_VER)
 
     if command in ["install"]:
         print("=== Step: Flashing entire image to device ===\n")

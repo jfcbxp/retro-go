@@ -450,6 +450,12 @@ void app_main(void)
     app->configNs = "launcher";
     app->isLauncher = true;
 
+    rg_system_switch_app(
+        "prboom-go",
+        "doom",
+        "/roms/doom/doom1.wad",
+        RG_BOOT_ONCE);
+
     if (!rg_storage_ready())
     {
         rg_display_clear(C_SKY_BLUE);
