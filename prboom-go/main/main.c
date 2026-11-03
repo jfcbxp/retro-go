@@ -558,6 +558,10 @@ void app_main()
     };
 
     app = rg_system_init(AUDIO_SAMPLE_RATE, &handlers, NULL);
+    if (!rg_storage_mkdir(RG_BASE_PATH_ROMS "/doom"))
+        RG_LOGE("Failed to create Doom data directory.");
+    if (!rg_storage_mkdir(RG_BASE_PATH_SAVES "/doom"))
+        RG_LOGE("Failed to create Doom save directory.");
     rg_system_set_tick_rate(TICRATE);
 
     SCREENWIDTH = RG_MIN(rg_display_get_width(), MAX_SCREENWIDTH);

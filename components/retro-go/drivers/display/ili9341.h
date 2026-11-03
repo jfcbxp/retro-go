@@ -12,6 +12,13 @@ static QueueHandle_t spi_buffers;
 #define SPI_BUFFER_COUNT      (5)
 #define SPI_BUFFER_LENGTH     (LCD_BUFFER_LENGTH * 2)
 
+#ifndef RG_SCREEN_BACKLIGHT_PWM_FREQ
+#define RG_SCREEN_BACKLIGHT_PWM_FREQ 5000
+#endif
+#ifndef RG_SCREEN_BACKLIGHT_PWM_CHANNEL
+#define RG_SCREEN_BACKLIGHT_PWM_CHANNEL LEDC_CHANNEL_0
+#endif
+
 #define ILI9341_CMD(cmd, data...)                    \
     {                                                \
         const uint8_t c = cmd, x[] = {data};         \
@@ -151,7 +158,7 @@ static void lcd_set_backlight(float percent)
     int error_code = 0;
 
 #if defined(RG_GPIO_LCD_BCKL)
-    error_code = ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0x1FFF * level, 50, 0);
+    error_code = ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE, RG_SCREEN_BACKLIGHT_PWM_CHANNEL, 0x1FFF * level, 50, 0);
 #endif
 
     if (error_code)
@@ -167,6 +174,15 @@ static void lcd_set_window(int left, int top, int width, int height)
 
     if (left < 0 || top < 0 || right >= display.screen.real_width || bottom >= display.screen.real_height)
         RG_LOGW("Bad lcd window (x0=%d, y0=%d, x1=%d, y1=%d)\n", left, top, right, bottom);
+
+#ifdef RG_SCREEN_OFFSET_X
+    left += RG_SCREEN_OFFSET_X;
+#endif
+#ifdef RG_SCREEN_OFFSET_Y
+    top += RG_SCREEN_OFFSET_Y;
+#endif
+    right = left + width - 1;
+    bottom = top + height - 1;
 
     ILI9341_CMD(0x2A, left >> 8, left & 0xff, right >> 8, right & 0xff); // Horiz
     ILI9341_CMD(0x2B, top >> 8, top & 0xff, bottom >> 8, bottom & 0xff); // Vert
@@ -194,18 +210,23 @@ static void lcd_sync(void)
 
 static void lcd_init(void)
 {
+#ifdef RG_GPIO_POWER_HOLD
+    gpio_set_direction(RG_GPIO_POWER_HOLD, GPIO_MODE_OUTPUT);
+    gpio_set_level(RG_GPIO_POWER_HOLD, 1);
+#endif
+
 #ifdef RG_GPIO_LCD_BCKL
     // Initialize backlight at 0% to avoid the lcd reset flash
     ledc_timer_config(&(ledc_timer_config_t){
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .duty_resolution = LEDC_TIMER_13_BIT,
         .timer_num = LEDC_TIMER_0,
-        .freq_hz = 5000,
+        .freq_hz = RG_SCREEN_BACKLIGHT_PWM_FREQ,
     });
     ledc_channel_config(&(ledc_channel_config_t){
         .gpio_num = RG_GPIO_LCD_BCKL,
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = LEDC_CHANNEL_0,
+        .channel = RG_SCREEN_BACKLIGHT_PWM_CHANNEL,
         .timer_sel = LEDC_TIMER_0,
         .duty = 0,
     #ifdef RG_GPIO_LCD_BCKL_INVERT
@@ -243,7 +264,12 @@ static void lcd_init(void)
     #warning "LCD init sequence is not defined for this device!"
 #endif
     ILI9341_CMD(0x11);    // Exit Sleep
+#ifdef RG_SCREEN_SLEEP_OUT_DELAY_MS
+    rg_usleep(RG_SCREEN_SLEEP_OUT_DELAY_MS * 1000);
+#else
     rg_usleep(10 * 1000); // Wait 10ms after sleep out
+#endif
+    ILI9341_CMD(0x13);    // Exit idle mode
     ILI9341_CMD(0x29);    // Display on
 }
 

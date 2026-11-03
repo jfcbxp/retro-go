@@ -14,14 +14,14 @@ import zlib
 DEFAULT_TARGET = os.getenv("RG_TOOL_TARGET", "odroid-go")
 DEFAULT_BAUD = os.getenv("RG_TOOL_BAUD", "1152000")
 DEFAULT_PORT = os.getenv("RG_TOOL_PORT", "COM3")
-DEFAULT_APPS = os.getenv("RG_TOOL_APPS", "launcher retro-core prboom-go gwenesis fmsx")
-PROJECT_NAME = os.getenv("PROJECT_NAME", "Retro-Go")
+DEFAULT_APPS = os.getenv("RG_TOOL_APPS", "prboom-go")
+PROJECT_NAME = os.getenv("PROJECT_NAME", "M5StickC-Plus2-Doom")
 PROJECT_ICON = os.getenv("PROJECT_ICON", "assets/icon.raw")
 PROJECT_APPS = {
   # Project name  Type, SubType, Size
   'launcher':     [0, 16, 1048576],
   'retro-core':   [0, 16, 1048576],
-  'prboom-go':    [0, 16, 786432],
+  'prboom-go':    [0, 16, 1572864],
   'gwenesis':     [0, 16, 1048576],
   'fmsx':         [0, 16, 589824],
 }
@@ -91,7 +91,8 @@ def build_image(apps, output_file, img_type="odroid", fatsize=0, fatfile=None, w
             ota_next_id += 1
         args += [str(part[0]), str(subtype), str(part[2]), app, os.path.join(app, "build", app + ".bin")]
     if wadfile:
-        args += ["1", "64", "4194304", "doomwad", wadfile]
+        wad_size = math.ceil(os.path.getsize(wadfile) / 0x10000) * 0x10000
+        args += ["1", "64", str(wad_size), "doomwad", wadfile]
     if fatsize:
         args += ["1", "129", fatsize, "vfs", fatfile or "none"]
 

@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LCD_BUFFER_LENGTH (RG_SCREEN_WIDTH * RG_SCREEN_HEIGHT) // Full framebuffer in pixels
+#ifndef RG_SCREEN_BUFFER_LENGTH
+#define RG_SCREEN_BUFFER_LENGTH (RG_SCREEN_WIDTH * RG_SCREEN_HEIGHT)
+#endif
+#define LCD_BUFFER_LENGTH RG_SCREEN_BUFFER_LENGTH
 
 // static rg_display_driver_t driver;
 static rg_task_t *display_task_queue;
@@ -134,7 +137,6 @@ static inline void write_update(const rg_surface_t *update)
     int lines_per_buffer = LCD_BUFFER_LENGTH / draw_width;
     int lines_remaining = draw_height;
     int lines_updated = 0;
-    int window_top = -1;
     int osd_next_call = 20;
 
     for (int y = 0; y < draw_height;)
@@ -233,10 +235,8 @@ static inline void write_update(const rg_surface_t *update)
         {
             int left = display.screen.margins.left + draw_left;
             int top = display.screen.margins.top + draw_top + y - lines_to_copy;
-            if (top != window_top)
-                lcd_set_window(left, top, draw_width, lines_to_copy);
+            lcd_set_window(left, top, draw_width, lines_to_copy);
             lcd_send_buffer(line_buffer, draw_width * lines_to_copy);
-            window_top = top + lines_to_copy;
             lines_updated += lines_to_copy;
         }
         else
@@ -249,7 +249,6 @@ static inline void write_update(const rg_surface_t *update)
         if (osd_next_call && draw_top + y >= osd_next_call)
         {
             osd_next_call = draw_on_screen_display(0, draw_top + y);
-            window_top = -1;
         }
 
         lines_remaining -= lines_to_copy;
@@ -599,12 +598,14 @@ void rg_display_clear_except(int left, int top, int width, int height, uint16_t 
     // FIXME: Do not ignore left/top...
     int left_offset = -display.screen.margins.left;
     int top_offset = -display.screen.margins.top;
-    int horiz = (display.screen.real_width - width + 1) / 2;
-    int vert = (display.screen.real_height - height + 1) / 2;
+    int horiz = (display.screen.real_width - width) / 2;
+    int vert = (display.screen.real_height - height) / 2;
+    int right = display.screen.real_width - width - horiz;
+    int bottom = display.screen.real_height - height - vert;
     rg_display_clear_rect(left_offset, top_offset, horiz, display.screen.real_height, color_le); // Left
-    rg_display_clear_rect(left_offset + horiz + width, top_offset, horiz, display.screen.real_height, color_le); // Right
+    rg_display_clear_rect(left_offset + horiz + width, top_offset, right, display.screen.real_height, color_le); // Right
     rg_display_clear_rect(left_offset + horiz, top_offset, display.screen.real_width - horiz * 2, vert, color_le); // Top
-    rg_display_clear_rect(left_offset + horiz, top_offset + vert + height, display.screen.real_width - horiz * 2, vert, color_le); // Bottom
+    rg_display_clear_rect(left_offset + horiz, top_offset + vert + height, display.screen.real_width - horiz - right, bottom, color_le); // Bottom
 }
 
 void rg_display_clear(uint16_t color_le)

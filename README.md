@@ -13,6 +13,13 @@ ODROID-GO and MRGC-G32, check [this list for other devices](components/retro-go/
 The project consists of a launcher and half a dozen applications that have been heavily
 optimized to reduce their cpu, memory, and flash needs without reducing compatibility!
 
+## M5StickC Plus2 Doom port
+
+This repository also contains a custom M5StickC Plus2 target and a PrBoom application configured
+for the board's ST7789 display. See [M5STICKC-PLUS2-DOOM.md](M5STICKC-PLUS2-DOOM.md) for the
+hardware overview and step-by-step Windows commands to build, flash, provision the IWAD, and
+monitor the firmware.
+
 ### Supported systems:
 - Nintendo: **NES, SNES (slow), Gameboy, Gameboy Color, Game & Watch**
 - Sega: **SG-1000, Master System, Mega Drive / Genesis, Game Gear**
